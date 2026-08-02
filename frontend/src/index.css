@@ -1172,3 +1172,277 @@ body {
 .sms-parsed-input:focus {
   border-color: var(--accent-gold) !important;
 }
+
+/* ==========================================
+   MOBILE RESPONSIVENESS OVERRIDES (max-width: 680px)
+   ========================================== */
+@media (max-width: 680px) {
+  /* Container and Header */
+  .app-container {
+    padding: 1.5rem 0.75rem !important;
+  }
+  
+  .header-section {
+    margin-bottom: 1.5rem !important;
+    text-align: center;
+  }
+  
+  .title-text {
+    font-size: 1.85rem !important;
+    line-height: 1.3 !important;
+  }
+  
+  .description-text {
+    font-size: 0.85rem !important;
+    line-height: 1.5 !important;
+  }
+
+  /* Toolbar / Configuration */
+  .controls-bar {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+    width: 100%;
+    margin-bottom: 0.75rem !important;
+  }
+  
+  .controls-bar .control-item {
+    width: 100% !important;
+    justify-content: center !important;
+    font-size: 0.8rem !important;
+    padding: 0.4rem 0.6rem !important;
+    height: 32px !important;
+  }
+  
+  /* Make loading indicator and logout span full width */
+  .controls-bar .control-item:nth-last-child(2),
+  .controls-bar .control-item:last-child {
+    grid-column: 1 / -1;
+  }
+
+  .controls-bar .control-item:last-child button {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+
+  /* Stats Bar */
+  .stats-bar {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+    margin-bottom: 1.5rem !important;
+    width: 100% !important;
+  }
+  
+  .stats-bar .stat-tag {
+    text-align: center !important;
+    padding: 0.4rem 0.6rem !important;
+    font-size: 0.75rem !important;
+    width: 100% !important;
+    margin: 0 !important;
+  }
+  
+  .stats-bar button {
+    grid-column: 1 / -1;
+    width: 100% !important;
+    justify-content: center !important;
+    height: 32px !important;
+    border-radius: 8px !important;
+  }
+
+  /* Detailed Month Panel */
+  .month-detail-panel {
+    padding: 1rem !important;
+    border-radius: 12px !important;
+    margin: 0.25rem 0 !important;
+  }
+  
+  .detail-header {
+    flex-direction: column !important;
+    align-items: flex-start !important;
+    gap: 0.5rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .detail-title {
+    font-size: 1.6rem !important;
+  }
+  
+  .detail-spending {
+    font-size: 0.9rem !important;
+  }
+
+  /* Monthly Actions Buttons */
+  .detail-actions {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    margin-bottom: 1.25rem !important;
+    width: 100% !important;
+  }
+  
+  .detail-actions button,
+  .detail-actions .btn {
+    width: 100% !important;
+    justify-content: center !important;
+    height: 34px !important;
+    padding: 0.45rem 1rem !important;
+  }
+
+  /* Month selection Cards */
+  .months-grid {
+    gap: 0.75rem !important;
+    margin-bottom: 2rem !important;
+  }
+  
+  .month-card {
+    padding: 1rem !important;
+  }
+  
+  .month-name {
+    font-size: 1.35rem !important;
+  }
+
+  /* Form row stacks */
+  .category-item-form-row {
+    flex-direction: column !important;
+    align-items: stretch !important;
+    gap: 0.5rem !important;
+  }
+  
+  .category-item-form-row .form-input,
+  .category-item-form-row select,
+  .category-item-form-row label,
+  .category-item-form-row button,
+  .category-item-form-row .btn-add-item {
+    width: 100% !important;
+    margin: 0 !important;
+    flex: none !important;
+    flex-grow: 0 !important;
+  }
+  
+  .category-item-form-row label {
+    padding: 0.4rem 0 !important;
+    justify-content: flex-start !important;
+  }
+
+  .category-item-form-grid {
+    padding: 0.75rem !important;
+    gap: 0.5rem !important;
+  }
+
+  /* Accordions trigger size */
+  .category-trigger {
+    padding: 0.85rem 1rem !important;
+  }
+  
+  .category-name {
+    font-size: 1.15rem !important;
+  }
+  
+  .category-sum-val {
+    font-size: 1.3rem !important;
+  }
+
+  .category-content {
+    padding: 0 1rem 1rem 1rem !important;
+  }
+
+  /* Category Add input row */
+  .add-category-bar {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+    margin-top: 1rem !important;
+  }
+  
+  .add-category-bar .form-input,
+  .add-category-bar .btn-add-category {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  /* SMS Parser rows */
+  .sms-parser-card {
+    padding: 0.75rem !important;
+  }
+  
+  .sms-parsed-row {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .sms-parsed-group {
+    width: 100% !important;
+    min-width: 100% !important;
+    flex: none !important;
+  }
+  
+  .sms-parsed-badge,
+  .sms-parsed-input {
+    width: 100% !important;
+  }
+
+  /* Tables items formatting */
+  .items-table td {
+    padding: 0.5rem 0.25rem !important;
+    font-size: 0.8rem !important;
+  }
+  
+  .item-name-cell,
+  .item-note-cell {
+    word-break: break-word !important;
+  }
+
+  /* Bank and Income configurations */
+  .bank-section,
+  .income-section {
+    padding: 1.25rem !important;
+    margin-top: 1.25rem !important;
+  }
+  
+  .bank-section-title,
+  .income-title {
+    font-size: 1.6rem !important;
+  }
+  
+  .bank-card {
+    padding: 1rem !important;
+  }
+  
+  .bank-amount {
+    font-size: 1.45rem !important;
+  }
+  
+  .bank-update-form,
+  .income-form {
+    flex-direction: column !important;
+    gap: 0.5rem !important;
+  }
+  
+  .bank-update-form .form-input,
+  .bank-update-form button,
+  .income-form .form-input,
+  .income-form button {
+    width: 100% !important;
+    flex: none !important;
+  }
+
+  /* Dashboard Grid */
+  .dashboard-section {
+    margin-top: 2rem !important;
+    margin-bottom: 2rem !important;
+  }
+  
+  .dashboard-title-main {
+    font-size: 1.6rem !important;
+    margin-bottom: 1rem !important;
+  }
+  
+  .dashboard-grid {
+    grid-template-columns: 1fr !important;
+    gap: 1rem !important;
+  }
+  
+  .dashboard-card {
+    padding: 1rem !important;
+  }
+}
