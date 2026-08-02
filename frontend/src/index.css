@@ -5,24 +5,24 @@
   --font-heading: 'Outfit', sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
   
-  --bg-dark: #0d0d0f;
-  --bg-card: #141416;
-  --bg-card-hover: #19191d;
-  --bg-input: #08080a;
+  --bg-dark: #12130e;
+  --bg-card: #181913;
+  --bg-card-hover: #1f2119;
+  --bg-input: #0a0b08;
   
-  --border-subtle: rgba(255, 255, 255, 0.06);
-  --border-focus: #e5c158;
+  --border-subtle: rgba(255, 255, 255, 0.04);
+  --border-focus: #e2c26f;
   
-  --accent-gold: #e5c158;
-  --accent-gold-hover: #f1d374;
-  --accent-gold-glow: rgba(229, 193, 88, 0.2);
+  --accent-gold: #e2c26f;
+  --accent-gold-hover: #ecd187;
+  --accent-gold-glow: rgba(226, 194, 111, 0.12);
   
-  --credit-green: #10b981;
-  --debit-red: #ef4444;
+  --credit-green: #95c378;
+  --debit-red: #e66b6b;
   
-  --text-primary: #f3f4f6;
-  --text-secondary: #9ca3af;
-  --text-muted: #52525b;
+  --text-primary: #f0eee8;
+  --text-secondary: #a5a79c;
+  --text-muted: #62645a;
   
   --transition-smooth: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
