@@ -5,10 +5,10 @@
   --font-heading: 'Outfit', sans-serif;
   --font-serif: 'Playfair Display', Georgia, serif;
   
-  --bg-dark: #12130e;
-  --bg-card: #181913;
-  --bg-card-hover: #1f2119;
-  --bg-input: #0a0b08;
+  --bg-dark: #151612;
+  --bg-card: #1f211a;
+  --bg-card-hover: #292c22;
+  --bg-input: #0c0d0a;
   
   --border-subtle: rgba(255, 255, 255, 0.04);
   --border-focus: #e2c26f;
