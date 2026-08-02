@@ -1,13 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { 
-  ChevronDown, 
-  ChevronUp,
-  Plus, 
   Trash2, 
   Download, 
   X, 
-  RefreshCw,
-  FileText,
   AlertCircle,
   CheckCircle,
   FileSpreadsheet,
@@ -1038,6 +1033,15 @@ function App() {
           <div className="control-item" style={{ borderColor: 'var(--debit-red)', color: 'var(--debit-red)' }}>
             <AlertCircle size={14} />
             <span style={{ fontSize: '0.8rem' }}>Server offline</span>
+          </div>
+        )}
+
+        {loading && (
+          <div className="control-item" style={{ borderColor: 'var(--accent-gold)', color: 'var(--accent-gold)' }}>
+            <span style={{ fontSize: '0.8rem', display: 'flex', alignItems: 'center', gap: '0.25rem' }}>
+              <span className="loading-dot" style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'currentColor', display: 'inline-block' }}></span>
+              Loading...
+            </span>
           </div>
         )}
 
