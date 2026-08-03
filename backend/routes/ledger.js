@@ -184,18 +184,32 @@ router.post('/ledger/item', async (req, res) => {
       return res.status(404).json({ error: 'Category not found' });
     }
 
+    const targetMode = mode || 'UPI';
     // Add item with payee, mode, and isRecurring
     category.items.push({
       name,
       payee: payee || '',
       amount: parseFloat(amount),
       note: note || '',
-      mode: mode || 'UPI',
+      mode: targetMode,
       isRecurring: !!isRecurring,
       date: date ? new Date(date) : new Date()
     });
 
     await ledger.save();
+
+    // Deduct from bank if mode matches a bankName
+    const bank = await Bank.findOne({ bankName: targetMode });
+    if (bank) {
+      bank.history.push({
+        amount: bank.currentAmount,
+        updatedAt: bank.lastUpdated
+      });
+      bank.currentAmount -= parseFloat(amount);
+      bank.lastUpdated = new Date();
+      await bank.save();
+    }
+
     res.status(201).json({ message: 'Item logged successfully', ledger });
   } catch (error) {
     console.error('Add item error:', error);
@@ -225,9 +239,29 @@ router.delete('/ledger/item', async (req, res) => {
       return res.status(404).json({ error: 'Category not found' });
     }
 
+    const item = category.items.id(itemId);
+    if (!item) {
+      return res.status(404).json({ error: 'Item not found' });
+    }
+
+    const itemMode = item.mode;
+    const itemAmount = item.amount;
+
     // Pull item
-    category.items = category.items.filter(item => item._id.toString() !== itemId);
+    category.items = category.items.filter(it => it._id.toString() !== itemId);
     await ledger.save();
+
+    // Refund bank if item mode matches a bankName
+    const bank = await Bank.findOne({ bankName: itemMode });
+    if (bank) {
+      bank.history.push({
+        amount: bank.currentAmount,
+        updatedAt: bank.lastUpdated
+      });
+      bank.currentAmount += itemAmount;
+      bank.lastUpdated = new Date();
+      await bank.save();
+    }
 
     res.json({ message: 'Item deleted successfully', ledger });
   } catch (error) {

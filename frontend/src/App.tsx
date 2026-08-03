@@ -380,6 +380,7 @@ function App() {
       setOpenCategories(next);
 
       fetchLedgers();
+      fetchBanks();
     } catch (err: any) {
       showToast(err.message || 'Error occurred', 'error');
     }
@@ -464,16 +465,16 @@ function App() {
   const parseUPISMS = (text: string) => {
     if (!text) return null;
     
-    // Amount matcher (e.g. Rs 450, Rs.450.00, INR 1200)
-    const amountRegex = /(?:rs\.?|inr)\s*([\d,]+(?:\.\d{1,2})?)/i;
+    // Amount matcher (e.g. Rs 450, Rs.450.00, INR 1200, Amt: 100)
+    const amountRegex = /(?:rs\.?|inr|amt:?)\s*([\d,]+(?:\.\d{1,2})?)/i;
     const amountMatch = text.match(amountRegex);
     let amount = '';
     if (amountMatch) {
       amount = amountMatch[1].replace(/,/g, '');
     }
     
-    // Payee matcher (looks for 'to XYZ' or 'paid to XYZ' stopping at ref/on/via/upi etc.)
-    const payeeRegex = /(?:to|vpa|sent\s+to|paid\s+to)\s+([A-Za-z0-9\s\.\&\@\-\_]+?)(?=\s+ref|\s+on|\s+via|\s+upi|\s+a\/c|\s+balance|\s+limit|\s+using|\s+txn|\s+transaction|$)/i;
+    // Payee matcher (looks for 'to XYZ', 'paid to XYZ', 'transferred to XYZ' stopping at ref/on/via/upi etc.)
+    const payeeRegex = /(?:to|vpa|sent\s+to|paid\s+to|transfer(?:red)?\s+to|debited\s+to|spent\s+at)\s+([A-Za-z0-9\s\.\&\@\-\_]+?)(?=\s+ref|\s+on|\s+via|\s+upi|\s+a\/c|\s+balance|\s+limit|\s+using|\s+txn|\s+transaction|$)/i;
     const payeeMatch = text.match(payeeRegex);
     let payee = '';
     if (payeeMatch) {
@@ -486,6 +487,12 @@ function App() {
       mode = 'Card';
     } else if (/cash/i.test(text)) {
       mode = 'Cash';
+    } else if (/hdfc/i.test(text)) {
+      mode = 'HDFC';
+    } else if (/sbi/i.test(text)) {
+      mode = 'SBI';
+    } else if (/kotak/i.test(text)) {
+      mode = 'Kotak';
     }
     
     return { amount, payee, mode };
@@ -544,6 +551,7 @@ function App() {
       setSmsInput('');
       setParsedSmsData(null);
       fetchLedgers();
+      fetchBanks();
     } catch (err: any) {
       showToast(err.message || 'Error occurred', 'error');
     }
@@ -561,6 +569,7 @@ function App() {
       
       showToast('Item deleted');
       fetchLedgers();
+      fetchBanks();
     } catch (err: any) {
       showToast(err.message || 'Error occurred', 'error');
     }
@@ -1597,14 +1606,14 @@ function App() {
                         onChange={(e) => {
                           const val = e.target.value;
                           setSmsInput(val);
-                          const parsed = parseUPISMS(val);
-                          if (parsed && parsed.amount && parsed.payee) {
-                            const matchedCatId = autoSelectCategory(parsed.payee, activeLedger.categories || []);
+                          if (val.trim()) {
+                            const parsed = parseUPISMS(val) || { amount: '', payee: '', mode: 'UPI' };
+                            const matchedCatId = parsed.payee ? autoSelectCategory(parsed.payee, activeLedger.categories || []) : '';
                             setParsedSmsData({
-                              amount: parsed.amount,
-                              payee: parsed.payee,
-                              mode: parsed.mode,
-                              categoryId: matchedCatId
+                              amount: parsed.amount || '',
+                              payee: parsed.payee || '',
+                              mode: parsed.mode || 'UPI',
+                              categoryId: matchedCatId || (activeLedger.categories?.[0]?._id || '')
                             });
                           } else {
                             setParsedSmsData(null);
@@ -1644,8 +1653,11 @@ function App() {
                                 value={parsedSmsData.mode}
                                 onChange={(e) => setParsedSmsData(prev => prev ? { ...prev, mode: e.target.value } : null)}
                               >
-                                <option value="UPI">UPI</option>
+                                <option value="HDFC">HDFC</option>
+                                <option value="SBI">SBI</option>
+                                <option value="Kotak">Kotak</option>
                                 <option value="Cash">Cash</option>
+                                <option value="UPI">UPI</option>
                                 <option value="Card">Card</option>
                               </select>
                             </div>
@@ -1899,8 +1911,11 @@ function App() {
                                           [cat._id]: { ...inputs, mode: e.target.value }
                                         }))}
                                       >
-                                        <option value="UPI">UPI</option>
+                                        <option value="HDFC">HDFC</option>
+                                        <option value="SBI">SBI</option>
+                                        <option value="Kotak">Kotak</option>
                                         <option value="Cash">Cash</option>
+                                        <option value="UPI">UPI</option>
                                         <option value="Card">Card</option>
                                       </select>
                                     </div>

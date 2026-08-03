@@ -5,7 +5,7 @@ const ItemSchema = new mongoose.Schema({
   payee: { type: String, default: '' },
   amount: { type: Number, required: true },
   note: { type: String, default: '' },
-  mode: { type: String, enum: ['UPI', 'Cash', 'Card'], default: 'UPI' },
+  mode: { type: String, default: 'UPI' },
   isRecurring: { type: Boolean, default: false },
   date: { type: Date, default: Date.now }
 });
