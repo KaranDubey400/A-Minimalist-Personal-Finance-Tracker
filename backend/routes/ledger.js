@@ -377,7 +377,7 @@ router.post('/ledger/category/budget', async (req, res) => {
  */
 router.post('/ledger/income', async (req, res) => {
   try {
-    const { year, month, source, amount, date } = req.body;
+    const { year, month, source, amount, mode, date } = req.body;
 
     if (!year || !month || !source || amount === undefined) {
       return res.status(400).json({ error: 'Year, month, source, and amount are required' });
@@ -388,13 +388,29 @@ router.post('/ledger/income', async (req, res) => {
       ledger = new Ledger({ year, month, categories: [], income: [] });
     }
 
+    const targetMode = mode || 'Cash';
+
     ledger.income.push({
       source,
       amount: parseFloat(amount),
+      mode: targetMode,
       date: date ? new Date(date) : new Date()
     });
 
     await ledger.save();
+
+    // Credit bank if mode matches a bankName
+    const bank = await Bank.findOne({ bankName: targetMode });
+    if (bank) {
+      bank.history.push({
+        amount: bank.currentAmount,
+        updatedAt: bank.lastUpdated
+      });
+      bank.currentAmount += parseFloat(amount);
+      bank.lastUpdated = new Date();
+      await bank.save();
+    }
+
     res.status(201).json({ message: 'Income logged successfully', ledger });
   } catch (error) {
     console.error('Add income error:', error);
@@ -419,8 +435,28 @@ router.delete('/ledger/income', async (req, res) => {
       return res.status(404).json({ error: 'Ledger not found' });
     }
 
+    const incomeItem = ledger.income.id(incomeId);
+    if (!incomeItem) {
+      return res.status(404).json({ error: 'Income entry not found' });
+    }
+
+    const itemMode = incomeItem.mode || 'Cash';
+    const itemAmount = incomeItem.amount;
+
     ledger.income = ledger.income.filter(inc => inc._id.toString() !== incomeId);
     await ledger.save();
+
+    // Deduct bank if mode matches a bankName
+    const bank = await Bank.findOne({ bankName: itemMode });
+    if (bank) {
+      bank.history.push({
+        amount: bank.currentAmount,
+        updatedAt: bank.lastUpdated
+      });
+      bank.currentAmount -= itemAmount;
+      bank.lastUpdated = new Date();
+      await bank.save();
+    }
 
     res.json({ message: 'Income deleted successfully', ledger });
   } catch (error) {

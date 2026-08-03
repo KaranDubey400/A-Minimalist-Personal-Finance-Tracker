@@ -51,6 +51,7 @@ interface Income {
   _id: string;
   source: string;
   amount: number;
+  mode?: string;
   date: string;
 }
 
@@ -124,6 +125,7 @@ function App() {
   const [budgetLimitInput, setBudgetLimitInput] = useState<string>('');
   const [incomeSourceInput, setIncomeSourceInput] = useState<string>('');
   const [incomeAmountInput, setIncomeAmountInput] = useState<string>(''); 
+  const [incomeModeInput, setIncomeModeInput] = useState<string>('Cash');
   const [smsInput, setSmsInput] = useState<string>('');
   const [parsedSmsData, setParsedSmsData] = useState<{ amount: string; payee: string; mode: string; categoryId: string } | null>(null); 
   
@@ -424,7 +426,8 @@ function App() {
           year,
           month: monthName,
           source: incomeSourceInput.trim(),
-          amount: parseFloat(incomeAmountInput)
+          amount: parseFloat(incomeAmountInput),
+          mode: incomeModeInput
         })
       });
       const data = await res.json();
@@ -434,6 +437,7 @@ function App() {
       setIncomeSourceInput('');
       setIncomeAmountInput('');
       fetchLedgers();
+      fetchBanks();
     } catch (err: any) {
       showToast(err.message || 'Error occurred', 'error');
     }
@@ -456,6 +460,7 @@ function App() {
 
       showToast('Income entry removed');
       fetchLedgers();
+      fetchBanks();
     } catch (err: any) {
       showToast(err.message || 'Error occurred', 'error');
     }
@@ -1543,8 +1548,19 @@ function App() {
                         <span className="month-name">{monthLedger.month}</span>
                         {hasTransactions && <span className="active-dot" />}
                       </div>
-                      <div className="month-amount">{currency} {totalSpending.toLocaleString('en-IN')}</div>
-                      <div className="month-categories-count">
+                      <div className="month-amount" style={{ display: 'flex', flexDirection: 'column', gap: '0.15rem' }}>
+                        <span style={{ fontSize: '1.25rem', color: 'var(--text-primary)', fontWeight: 600 }}>Spent: {currency} {totalSpending.toLocaleString('en-IN')}</span>
+                        {(() => {
+                          const monthIncomeList = monthLedger.income || [];
+                          const monthTotalIncome = monthIncomeList.reduce((sum, inc) => sum + inc.amount, 0);
+                          return monthTotalIncome > 0 ? (
+                            <span style={{ fontSize: '0.85rem', color: 'var(--credit-green)', fontWeight: 600 }}>
+                              Income: +{currency} {monthTotalIncome.toLocaleString('en-IN')}
+                            </span>
+                          ) : null;
+                        })()}
+                      </div>
+                      <div className="month-categories-count" style={{ marginTop: '0.4rem' }}>
                         {monthLedger.categories ? monthLedger.categories.length : 0} CATEGORIES
                       </div>
                     </div>
@@ -1992,7 +2008,10 @@ function App() {
                         <div className="income-list">
                           {activeIncomeList.map(inc => (
                             <div key={inc._id} className="income-row">
-                              <span className="income-source">{inc.source}</span>
+                              <div style={{ display: 'flex', flexDirection: 'column' }}>
+                                <span className="income-source">{inc.source}</span>
+                                {inc.mode && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>via {inc.mode}</span>}
+                              </div>
                               <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
                                 <span className="income-amount">+{currency} {inc.amount.toLocaleString('en-IN')}</span>
                                 <button 
@@ -2009,7 +2028,7 @@ function App() {
                       )}
 
                       {/* Log Income Form */}
-                      <div className="income-form" style={{ marginTop: '1.25rem' }}>
+                      <div className="income-form" style={{ marginTop: '1.25rem', gap: '0.5rem' }}>
                         <input 
                           type="text" 
                           className="form-input" 
@@ -2026,7 +2045,20 @@ function App() {
                           value={incomeAmountInput}
                           onChange={(e) => setIncomeAmountInput(e.target.value)}
                         />
-                        <button className="btn-add-item" style={{ flexGrow: 1, padding: '0.45rem 1rem' }} onClick={() => handleLogIncome(activeLedger.month)}>
+                        <select 
+                          className="form-input" 
+                          style={{ flex: 1.2, background: 'var(--bg-input)' }}
+                          value={incomeModeInput}
+                          onChange={(e) => setIncomeModeInput(e.target.value)}
+                        >
+                          <option value="HDFC">HDFC</option>
+                          <option value="SBI">SBI</option>
+                          <option value="Kotak">Kotak</option>
+                          <option value="Cash">Cash</option>
+                          <option value="Card">Card</option>
+                          <option value="UPI">UPI</option>
+                        </select>
+                        <button className="btn-add-item" style={{ flexGrow: 1, padding: '0.45rem 1.25rem' }} onClick={() => handleLogIncome(activeLedger.month)}>
                           + Log
                         </button>
                       </div>

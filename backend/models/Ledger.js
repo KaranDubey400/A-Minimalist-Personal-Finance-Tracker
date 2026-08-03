@@ -19,6 +19,7 @@ const CategorySchema = new mongoose.Schema({
 const IncomeSchema = new mongoose.Schema({
   source: { type: String, required: true },
   amount: { type: Number, required: true },
+  mode: { type: String, default: 'Cash' },
   date: { type: Date, default: Date.now }
 });
 
