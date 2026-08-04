@@ -1446,3 +1446,69 @@ body {
     padding: 1rem !important;
   }
 }
+
+/* Timeline view styles */
+.timeline-date-group {
+  margin-bottom: 1.75rem;
+}
+
+.timeline-date-header {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--accent-gold);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  padding-bottom: 0.35rem;
+  margin-bottom: 0.75rem;
+  letter-spacing: 0.5px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.timeline-item-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.04);
+  border-radius: 8px;
+  margin-bottom: 0.5rem;
+  transition: all 0.2s ease;
+}
+
+.timeline-item-row:hover {
+  background: rgba(255, 255, 255, 0.04);
+  border-color: rgba(255, 255, 255, 0.08);
+}
+
+.timeline-item-info {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.timeline-item-name {
+  font-weight: 600;
+  font-size: 0.95rem;
+  color: var(--text-primary);
+}
+
+.timeline-item-meta {
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.timeline-item-amount {
+  font-family: var(--font-heading);
+  font-weight: 700;
+  font-size: 1rem;
+}
+
+.timeline-item-amount.income {
+  color: var(--credit-green);
+}
+
+.timeline-item-amount.expense {
+  color: var(--text-primary);
+}

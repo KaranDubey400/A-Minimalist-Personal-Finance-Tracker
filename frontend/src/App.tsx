@@ -8,7 +8,8 @@ import {
   FileSpreadsheet,
   Edit3,
   TrendingUp,
-  LogOut
+  LogOut,
+  Clock
 } from 'lucide-react';
 import { jsPDF } from 'jspdf';
 import autoTable from 'jspdf-autotable';
@@ -101,6 +102,7 @@ function App() {
   const [banks, setBanks] = useState<Bank[]>([]);
   const [expandedMonth, setExpandedMonth] = useState<string | null>(null);
   const [showDashboard, setShowDashboard] = useState<boolean>(false);
+  const [showTimelineView, setShowTimelineView] = useState<boolean>(false);
   
   // Auth state hooks
   const [token, setToken] = useState<string | null>(localStorage.getItem('paisa_ledger_token'));
@@ -619,6 +621,59 @@ function App() {
     return monthLedger.categories.reduce((sum, cat) => {
       return sum + cat.items.reduce((cSum, item) => cSum + item.amount, 0);
     }, 0);
+  };
+
+  // Helper: Group all transactions date-wise for Timeline View
+  const getTimelineGroups = (ledger: MonthLedger) => {
+    const list: any[] = [];
+    
+    // 1. Gather all expense items
+    if (ledger && ledger.categories) {
+      ledger.categories.forEach(cat => {
+        if (cat.items) {
+          cat.items.forEach(item => {
+            list.push({
+              ...item,
+              type: 'expense',
+              categoryName: cat.name,
+              categoryId: cat._id
+            });
+          });
+        }
+      });
+    }
+
+    // 2. Gather all incomes
+    if (ledger && ledger.income) {
+      ledger.income.forEach(inc => {
+        list.push({
+          ...inc,
+          type: 'income',
+          name: inc.source,
+          categoryName: 'Income'
+        });
+      });
+    }
+
+    // 3. Sort by date descending
+    list.sort((a, b) => {
+      const dateA = a.date ? new Date(a.date).getTime() : 0;
+      const dateB = b.date ? new Date(b.date).getTime() : 0;
+      return dateB - dateA;
+    });
+
+    // 4. Group by date string
+    const groups: Record<string, any[]> = {};
+    list.forEach(item => {
+      const d = item.date ? new Date(item.date) : new Date();
+      const dateStr = d.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+      if (!groups[dateStr]) {
+        groups[dateStr] = [];
+      }
+      groups[dateStr].push(item);
+    });
+
+    return groups;
   };
 
   // Helper: Get summary metrics for the entire year
@@ -1541,7 +1596,10 @@ function App() {
                     <div 
                       key={monthLedger.month}
                       className={`month-card ${isSelected ? 'active' : ''}`}
-                      onClick={() => setExpandedMonth(isSelected ? null : monthLedger.month)}
+                      onClick={() => {
+                        setExpandedMonth(isSelected ? null : monthLedger.month);
+                        setShowTimelineView(false);
+                      }}
                       style={expandedMonth ? { maxWidth: '440px', margin: '0 auto', width: '100%' } : undefined}
                     >
                       <div className="month-header">
@@ -1602,7 +1660,20 @@ function App() {
                         <button className="btn" onClick={() => handleExportMonthCSV(activeLedger)}>
                           <FileSpreadsheet size={14} /> Export CSV
                         </button>
-                        <button className="btn" onClick={() => setExpandedMonth(null)}>
+                        <button 
+                          className="btn" 
+                          style={{
+                            borderColor: showTimelineView ? 'var(--accent-gold)' : 'rgba(255,255,255,0.08)',
+                            color: showTimelineView ? 'var(--accent-gold)' : 'var(--text-primary)',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            gap: '0.35rem'
+                          }}
+                          onClick={() => setShowTimelineView(!showTimelineView)}
+                        >
+                          <Clock size={14} /> {showTimelineView ? 'Category View' : 'Daily Timeline'}
+                        </button>
+                        <button className="btn" onClick={() => { setExpandedMonth(null); setShowTimelineView(false); }}>
                           Close
                         </button>
                       </div>
@@ -1715,355 +1786,428 @@ function App() {
                       )}
                     </div>
 
-                    {/* Accordion Categories List inside Month */}
-                    <div className="categories-list">
-                      {(!activeLedger.categories || activeLedger.categories.length === 0) ? (
-                        <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.9rem' }}>
-                          No spending categories created for this month yet. Use the bar below to add one!
-                        </div>
-                      ) : (
-                        activeLedger.categories.map(cat => {
-                          const isCatOpen = openCategories.has(cat._id);
-                          const catTotal = cat.items.reduce((sum, item) => sum + item.amount, 0);
-                          const percentage = activeTotal > 0 ? (catTotal / activeTotal) * 100 : 0;
-                          const inputs = itemInputs[cat._id] || { name: '', payee: '', amount: '', note: '', mode: 'UPI', isRecurring: false, date: '' };
-                          const todayStr = new Date().toISOString().substring(0, 10);
-                          const selectedDate = inputs.date !== undefined && inputs.date !== '' ? inputs.date : todayStr;
-                          
-                          // Budget limits calculations
-                          const limit = cat.budgetLimit || 0;
-                          const hasLimit = limit > 0;
-                          const limitPercentage = hasLimit ? Math.min((catTotal / limit) * 100, 100) : 0;
-                          const isOverBudget = limit > 0 && catTotal >= limit * 0.9;
+                    {showTimelineView ? (
+                      <div className="timeline-view" onClick={(e) => e.stopPropagation()}>
+                        {(() => {
+                          const groups = getTimelineGroups(activeLedger);
+                          const dateKeys = Object.keys(groups);
 
-                          return (
-                            <div key={cat._id} className={`category-accordion ${isCatOpen ? 'open' : ''}`}>
+                          if (dateKeys.length === 0) {
+                            return (
+                              <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.95rem' }}>
+                                No transactions logged for this month yet.
+                              </div>
+                            );
+                          }
+
+                          return dateKeys.map(dateStr => {
+                            const items = groups[dateStr];
+                            return (
+                              <div key={dateStr} className="timeline-date-group">
+                                <div className="timeline-date-header">
+                                  <span>{dateStr}</span>
+                                </div>
+                                <div className="timeline-items">
+                                  {items.map(item => {
+                                    const isIncome = item.type === 'income';
+                                    return (
+                                      <div key={item._id} className="timeline-item-row">
+                                        <div className="timeline-item-info">
+                                          <div className="timeline-item-name">
+                                            {item.name}
+                                          </div>
+                                          <div className="timeline-item-meta">
+                                            <span style={{ 
+                                              background: isIncome ? 'rgba(46, 117, 89, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                                              color: isIncome ? 'var(--credit-green)' : 'var(--text-secondary)',
+                                              padding: '0.1rem 0.4rem',
+                                              borderRadius: '4px',
+                                              marginRight: '0.4rem',
+                                              fontSize: '0.65rem',
+                                              fontWeight: 600
+                                            }}>
+                                              {item.categoryName}
+                                            </span>
+                                            {item.payee && `to ${item.payee}`}
+                                            {item.mode && ` • via ${item.mode}`}
+                                            {item.note && ` • Note: ${item.note}`}
+                                          </div>
+                                        </div>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                          <span className={`timeline-item-amount ${isIncome ? 'income' : 'expense'}`}>
+                                            {isIncome ? '+' : '-'}{currency} {item.amount.toLocaleString('en-IN')}
+                                          </span>
+                                          <button 
+                                            className="item-delete-btn"
+                                            onClick={() => {
+                                              if (isIncome) {
+                                                handleDeleteIncome(activeLedger.month, item._id);
+                                              } else {
+                                                handleDeleteItem(activeLedger.month, item.categoryId, item._id);
+                                              }
+                                            }}
+                                            style={{ padding: '0.2rem' }}
+                                            title="Delete transaction"
+                                          >
+                                            <Trash2 size={13} />
+                                          </button>
+                                        </div>
+                                      </div>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                            );
+                          });
+                        })()}
+                      </div>
+                    ) : (
+                      <>
+                        <div className="categories-list">
+                          {(!activeLedger.categories || activeLedger.categories.length === 0) ? (
+                            <div style={{ textAlign: 'center', padding: '2rem 1rem', color: 'var(--text-secondary)', fontStyle: 'italic', fontSize: '0.9rem' }}>
+                              No spending categories created for this month yet. Use the bar below to add one!
+                            </div>
+                          ) : (
+                            activeLedger.categories.map(cat => {
+                              const isCatOpen = openCategories.has(cat._id);
+                              const catTotal = cat.items.reduce((sum, item) => sum + item.amount, 0);
+                              const percentage = activeTotal > 0 ? (catTotal / activeTotal) * 100 : 0;
+                              const inputs = itemInputs[cat._id] || { name: '', payee: '', amount: '', note: '', mode: 'UPI', isRecurring: false, date: '' };
+                              const todayStr = new Date().toISOString().substring(0, 10);
+                              const selectedDate = inputs.date !== undefined && inputs.date !== '' ? inputs.date : todayStr;
                               
-                              {/* Trigger row */}
-                              <div className="category-trigger" onClick={() => toggleCategory(cat._id)}>
-                                <div className="category-title-section" style={{ flexGrow: 1 }}>
-                                  <span className="accordion-arrow" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
-                                    {isCatOpen ? '▼' : '▶'}
-                                  </span>
+                              // Budget limits calculations
+                              const limit = cat.budgetLimit || 0;
+                              const hasLimit = limit > 0;
+                              const limitPercentage = hasLimit ? Math.min((catTotal / limit) * 100, 100) : 0;
+                              const isOverBudget = limit > 0 && catTotal >= limit * 0.9;
+
+                              return (
+                                <div key={cat._id} className={`category-accordion ${isCatOpen ? 'open' : ''}`}>
                                   
-                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', flexGrow: 1, paddingRight: '1rem' }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                                      <span className="category-name">{cat.name}</span>
+                                  {/* Trigger row */}
+                                  <div className="category-trigger" onClick={() => toggleCategory(cat._id)}>
+                                    <div className="category-title-section" style={{ flexGrow: 1 }}>
+                                      <span className="accordion-arrow" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                                        {isCatOpen ? '▼' : '▶'}
+                                      </span>
                                       
-                                      {/* Edit budget limit */}
-                                      <button
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setEditingBudgetCategory(editingBudgetCategory === cat._id ? null : cat._id);
-                                          setBudgetLimitInput(limit > 0 ? limit.toString() : '');
-                                        }}
-                                        style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', cursor: 'pointer', padding: '0.1rem' }}
-                                        title="Set budget limit"
-                                      >
-                                        <Edit3 size={11} />
-                                      </button>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', flexGrow: 1, paddingRight: '1rem' }}>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                                          <span className="category-name">{cat.name}</span>
+                                          {isCatOpen && (
+                                            <button 
+                                              className="edit-budget-btn"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setEditingBudgetCategory(cat._id);
+                                                setBudgetLimitInput(limit > 0 ? limit.toString() : '');
+                                              }}
+                                            >
+                                              <Edit3 size={11} />
+                                            </button>
+                                          )}
+                                        </div>
+                                        
+                                        {/* Budget Limit Sub-bar */}
+                                        {editingBudgetCategory === cat._id ? (
+                                          <div className="budget-edit-form" onClick={(e) => e.stopPropagation()}>
+                                            <input 
+                                              type="number"
+                                              className="form-input form-input-amt"
+                                              placeholder="Budget Limit"
+                                              value={budgetLimitInput}
+                                              onChange={(e) => setBudgetLimitInput(e.target.value)}
+                                              style={{ fontSize: '0.75rem', padding: '0.15rem 0.4rem', height: 'auto', width: '90px' }}
+                                            />
+                                            <button 
+                                              className="btn-add-item" 
+                                              style={{ padding: '0.15rem 0.5rem', width: 'auto', fontSize: '0.7rem' }}
+                                              onClick={() => handleUpdateCategoryBudget(activeLedger.month, cat._id)}
+                                            >
+                                              Set
+                                            </button>
+                                            <button 
+                                              className="btn-add-item" 
+                                              style={{ padding: '0.15rem 0.5rem', width: 'auto', fontSize: '0.7rem', background: 'transparent', color: 'var(--text-secondary)', border: 'none' }}
+                                              onClick={() => setEditingBudgetCategory(null)}
+                                            >
+                                              Cancel
+                                            </button>
+                                          </div>
+                                        ) : (
+                                          hasLimit && (
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
+                                              <div className="budget-progress-bg">
+                                                <div 
+                                                  className={`budget-progress-bar ${isOverBudget ? 'danger' : ''}`} 
+                                                  style={{ width: `${limitPercentage}%` }}
+                                                />
+                                              </div>
+                                              <span style={{ fontSize: '0.65rem', color: isOverBudget ? '#ff6b6b' : 'var(--text-muted)' }}>
+                                                Limit: {currency}{limit.toLocaleString('en-IN')}
+                                              </span>
+                                            </div>
+                                          )
+                                        )}
+                                      </div>
                                     </div>
                                     
-                                    {/* Inline budget input */}
-                                    {editingBudgetCategory === cat._id && (
-                                      <div 
-                                        style={{ display: 'flex', gap: '0.25rem', marginTop: '0.25rem', alignItems: 'center' }} 
-                                        onClick={(e) => e.stopPropagation()}
+                                    <div className="category-meta-section">
+                                      <span className="category-total">
+                                        {currency} {catTotal.toLocaleString('en-IN')}
+                                        {hasLimit && (
+                                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '0.2rem' }}>
+                                            / {limit.toLocaleString('en-IN')}
+                                          </span>
+                                        )}
+                                      </span>
+                                      <span className="category-badge">
+                                        {cat.items.length} ITEMS • {percentage.toFixed(0)}%
+                                      </span>
+                                      <button 
+                                        className="category-delete-btn"
+                                        onClick={(e) => {
+                                          e.stopPropagation();
+                                          if (confirm(`Are you sure you want to delete category "${cat.name}"? This deletes all items inside it.`)) {
+                                            handleDeleteCategory(activeLedger.month, cat._id);
+                                          }
+                                        }}
                                       >
-                                        <input 
-                                          type="number"
-                                          className="form-input"
-                                          style={{ width: '90px', padding: '0.1rem 0.3rem', fontSize: '0.75rem', background: '#09090b', height: 'auto', border: '1px solid rgba(255,255,255,0.08)' }}
-                                          placeholder="Limit amount"
-                                          value={budgetLimitInput}
-                                          onChange={(e) => setBudgetLimitInput(e.target.value)}
-                                        />
-                                        <button 
-                                          className="btn-add-item" 
-                                          style={{ padding: '0.1rem 0.3rem', fontSize: '0.75rem', width: 'auto' }}
-                                          onClick={() => handleUpdateCategoryBudget(activeLedger.month, cat._id)}
-                                        >
-                                          Save
-                                        </button>
-                                        <button 
-                                          style={{ background: 'transparent', border: 'none', color: 'var(--text-muted)', fontSize: '0.75rem', cursor: 'pointer' }}
-                                          onClick={() => setEditingBudgetCategory(null)}
-                                        >
-                                          ✕
-                                        </button>
-                                      </div>
-                                    )}
-
-                                    {/* Spent vs Budget limit progress bar */}
-                                    {hasLimit && (
-                                      <div className="budget-bar-bg">
-                                        <div 
-                                          className={`budget-bar-fill ${isOverBudget ? 'glow-red' : 'glow-gold'}`} 
-                                          style={{ width: `${limitPercentage}%` }} 
-                                        />
-                                      </div>
-                                    )}
-                                  </div>
-                                </div>
-
-                                <div className="category-amount-section">
-                                  <div style={{ marginRight: '0.5rem' }}>
-                                    <div className="category-sum-val">
-                                      {currency} {catTotal.toLocaleString('en-IN')}
-                                      {hasLimit && (
-                                        <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', fontWeight: 500, marginLeft: '0.3rem' }}>
-                                          / {limit.toLocaleString('en-IN')}
-                                        </span>
-                                      )}
-                                    </div>
-                                    <div className="category-meta-val">
-                                      {cat.items.length} items • {percentage.toFixed(0)}%
-                                    </div>
-                                  </div>
-                                  <button 
-                                    className="category-delete-btn"
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      handleDeleteCategory(activeLedger.month, cat._id);
-                                    }}
-                                    title="Delete category"
-                                  >
-                                    <X size={16} />
-                                  </button>
-                                </div>
-                              </div>
-
-                              {/* Expanded items list and form */}
-                              {isCatOpen && (
-                                <div className="category-content" onClick={(e) => e.stopPropagation()}>
-                                  {cat.items.length === 0 ? (
-                                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '1rem 0' }}>
-                                      Nothing logged here yet.
-                                    </div>
-                                  ) : (
-                                    <table className="items-table">
-                                      <tbody>
-                                        {cat.items.map(item => (
-                                          <tr key={item._id}>
-                                            <td className="item-name-cell">
-                                              <div>{item.name}</div>
-                                              {(item.payee || item.mode || item.date) && (
-                                                <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
-                                                  {item.date && `${new Date(item.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} • `}
-                                                  {item.payee && `to ${item.payee}`} {item.mode && ` • ${item.mode}`} {item.isRecurring && ` • [Recurring]`}
-                                                </div>
-                                              )}
-                                            </td>
-                                            <td className="item-note-cell">{item.note}</td>
-                                            <td className="item-amount-cell">{currency} {item.amount.toLocaleString('en-IN')}</td>
-                                            <td style={{ width: '35px', textAlign: 'right' }}>
-                                              <button 
-                                                className="item-delete-btn"
-                                                onClick={() => handleDeleteItem(activeLedger.month, cat._id, item._id)}
-                                              >
-                                                <Trash2 size={13} />
-                                              </button>
-                                            </td>
-                                          </tr>
-                                        ))}
-                                      </tbody>
-                                    </table>
-                                  )}
-
-                                  {/* Inline Add Item Form inside Category Accordion - Styled in 3-row layout */}
-                                  <div className="category-item-form-grid">
-                                    {/* Row 1: Item Name & Payee */}
-                                    <div className="category-item-form-row">
-                                      <input 
-                                        type="text" 
-                                        className="form-input" 
-                                        placeholder="Item Name"
-                                        value={inputs.name || ''}
-                                        onChange={(e) => setItemInputs(prev => ({
-                                          ...prev,
-                                          [cat._id]: { ...inputs, name: e.target.value }
-                                        }))}
-                                      />
-                                      <input 
-                                        type="text" 
-                                        className="form-input" 
-                                        placeholder="Payee/Merchant (e.g. Zomato)"
-                                        value={inputs.payee || ''}
-                                        onChange={(e) => setItemInputs(prev => ({
-                                          ...prev,
-                                          [cat._id]: { ...inputs, payee: e.target.value }
-                                        }))}
-                                      />
-                                    </div>
-
-                                    {/* Row 2: Amount, Date & Mode Dropdown */}
-                                    <div className="category-item-form-row" style={{ marginTop: '0.5rem' }}>
-                                      <input 
-                                        type="number" 
-                                        className="form-input" 
-                                        placeholder="Amount"
-                                        value={inputs.amount || ''}
-                                        onChange={(e) => setItemInputs(prev => ({
-                                          ...prev,
-                                          [cat._id]: { ...inputs, amount: e.target.value }
-                                        }))}
-                                      />
-                                      <input 
-                                        type="date"
-                                        className="form-input"
-                                        style={{ colorScheme: 'dark' }}
-                                        value={selectedDate}
-                                        onChange={(e) => setItemInputs(prev => ({
-                                          ...prev,
-                                          [cat._id]: { ...inputs, date: e.target.value }
-                                        }))}
-                                      />
-                                      <select 
-                                        className="form-input"
-                                        style={{ background: 'var(--bg-input)' }}
-                                        value={inputs.mode || 'UPI'}
-                                        onChange={(e) => setItemInputs(prev => ({
-                                          ...prev,
-                                          [cat._id]: { ...inputs, mode: e.target.value }
-                                        }))}
-                                      >
-                                        <option value="HDFC">HDFC</option>
-                                        <option value="SBI">SBI</option>
-                                        <option value="Kotak">Kotak</option>
-                                        <option value="Cash">Cash</option>
-                                        <option value="UPI">UPI</option>
-                                        <option value="Card">Card</option>
-                                      </select>
-                                    </div>
-
-                                    {/* Row 3: Note & Recurring Checkbox */}
-                                    <div className="category-item-form-row" style={{ marginTop: '0.5rem', alignItems: 'center' }}>
-                                      <input 
-                                        type="text" 
-                                        className="form-input" 
-                                        style={{ flexGrow: 2 }}
-                                        placeholder="Note (optional)"
-                                        value={inputs.note || ''}
-                                        onChange={(e) => setItemInputs(prev => ({
-                                          ...prev,
-                                          [cat._id]: { ...inputs, note: e.target.value }
-                                        }))}
-                                      />
-                                      
-                                      <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0 0.5rem', userSelect: 'none' }}>
-                                        <input 
-                                          type="checkbox" 
-                                          checked={!!inputs.isRecurring}
-                                          onChange={(e) => setItemInputs(prev => ({
-                                            ...prev,
-                                            [cat._id]: { ...inputs, isRecurring: e.target.checked }
-                                          }))}
-                                        />
-                                        <span>Repeat monthly</span>
-                                      </label>
-
-                                      <button className="btn-add-item" style={{ flexGrow: 1 }} onClick={() => handleAddItem(activeLedger.month, cat._id)}>
-                                        Add
+                                        <X size={14} />
                                       </button>
                                     </div>
                                   </div>
 
+                                  {/* Expanded items list and form */}
+                                  {isCatOpen && (
+                                    <div className="category-content" onClick={(e) => e.stopPropagation()}>
+                                      {cat.items.length === 0 ? (
+                                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '1rem 0' }}>
+                                          Nothing logged here yet.
+                                        </div>
+                                      ) : (
+                                        <table className="items-table">
+                                          <tbody>
+                                            {cat.items.map(item => (
+                                              <tr key={item._id}>
+                                                <td className="item-name-cell">
+                                                  <div>{item.name}</div>
+                                                  {(item.payee || item.mode || item.date) && (
+                                                    <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.15rem', textTransform: 'uppercase', letterSpacing: '0.3px' }}>
+                                                      {item.date && `${new Date(item.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })} • `}
+                                                      {item.payee && `to ${item.payee}`} {item.mode && ` • ${item.mode}`} {item.isRecurring && ` • [Recurring]`}
+                                                    </div>
+                                                  )}
+                                                </td>
+                                                <td className="item-note-cell">{item.note}</td>
+                                                <td className="item-amount-cell">{currency} {item.amount.toLocaleString('en-IN')}</td>
+                                                <td style={{ width: '35px', textAlign: 'right' }}>
+                                                  <button 
+                                                    className="item-delete-btn"
+                                                    onClick={() => handleDeleteItem(activeLedger.month, cat._id, item._id)}
+                                                  >
+                                                    <Trash2 size={13} />
+                                                  </button>
+                                                </td>
+                                              </tr>
+                                            ))}
+                                          </tbody>
+                                        </table>
+                                      )}
+
+                                      {/* Add new item form inside accordion */}
+                                      <div className="add-item-form-grid">
+                                        {/* Row 1: Item Name & Payee */}
+                                        <input 
+                                          type="text" 
+                                          className="form-input" 
+                                          placeholder="Item Name" 
+                                          value={inputs.name || ''}
+                                          onChange={(e) => setItemInputs(prev => ({
+                                            ...prev,
+                                            [cat._id]: { ...inputs, name: e.target.value }
+                                          }))}
+                                        />
+                                        <input 
+                                          type="text" 
+                                          className="form-input" 
+                                          placeholder="Payee/Merchant (e.g. Zomato)"
+                                          value={inputs.payee || ''}
+                                          onChange={(e) => setItemInputs(prev => ({
+                                            ...prev,
+                                            [cat._id]: { ...inputs, payee: e.target.value }
+                                          }))}
+                                        />
+                                        
+                                        {/* Row 2: Amount & Date */}
+                                        <input 
+                                          type="number" 
+                                          className="form-input form-input-amt" 
+                                          placeholder="Amount" 
+                                          value={inputs.amount || ''}
+                                          onChange={(e) => setItemInputs(prev => ({
+                                            ...prev,
+                                            [cat._id]: { ...inputs, amount: e.target.value }
+                                          }))}
+                                        />
+                                        <input 
+                                          type="date" 
+                                          className="form-input" 
+                                          value={selectedDate}
+                                          onChange={(e) => setItemInputs(prev => ({
+                                            ...prev,
+                                            [cat._id]: { ...inputs, date: e.target.value }
+                                          }))}
+                                        />
+
+                                        {/* Row 3: Mode selection */}
+                                        <select 
+                                          className="form-input"
+                                          style={{ background: 'var(--bg-input)' }}
+                                          value={inputs.mode || 'UPI'}
+                                          onChange={(e) => setItemInputs(prev => ({
+                                            ...prev,
+                                            [cat._id]: { ...inputs, mode: e.target.value }
+                                          }))}
+                                        >
+                                          <option value="HDFC">HDFC</option>
+                                          <option value="SBI">SBI</option>
+                                          <option value="Kotak">Kotak</option>
+                                          <option value="Cash">Cash</option>
+                                          <option value="Card">Card</option>
+                                          <option value="UPI">UPI</option>
+                                        </select>
+                                        
+                                        {/* Row 4: Optional Note & Add Action */}
+                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                          <input 
+                                            type="text" 
+                                            className="form-input" 
+                                            placeholder="Note (optional)" 
+                                            value={inputs.note || ''}
+                                            onChange={(e) => setItemInputs(prev => ({
+                                              ...prev,
+                                              [cat._id]: { ...inputs, note: e.target.value }
+                                            }))}
+                                            style={{ flexGrow: 1 }}
+                                          />
+                                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
+                                            <input 
+                                              type="checkbox"
+                                              checked={!!inputs.isRecurring}
+                                              onChange={(e) => setItemInputs(prev => ({
+                                                ...prev,
+                                                [cat._id]: { ...inputs, isRecurring: e.target.checked }
+                                              }))}
+                                            />
+                                            Repeat monthly
+                                          </label>
+                                        </div>
+
+                                        <button className="btn-add-item" onClick={() => handleAddItem(activeLedger.month, cat._id)}>
+                                          Add
+                                        </button>
+                                      </div>
+
+                                    </div>
+                                  )}
                                 </div>
-                              )}
-
-                            </div>
-                          );
-                        })
-                      )}
-                    </div>
-
-                    {/* New Category input bar */}
-                    <div className="add-category-bar">
-                      <input 
-                        type="text" 
-                        className="form-input" 
-                        placeholder="New category name..."
-                        value={newCategoryName}
-                        onChange={(e) => setNewCategoryName(e.target.value)}
-                      />
-                      <button className="btn-add-category" onClick={() => handleAddCategory(activeLedger.month)}>
-                        + Category
-                      </button>
-                    </div>
-
-                    {/* Monthly Income Logging Panel */}
-                    <div className="income-section">
-                      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
-                        <h3 className="income-title" style={{ margin: 0, fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>Monthly Income</h3>
-                        <span style={{ fontSize: '0.9rem', color: 'var(--credit-green)', fontWeight: 600, fontFamily: 'var(--font-heading)' }}>
-                          Total: {currency} {totalIncome.toLocaleString('en-IN')}
-                        </span>
-                      </div>
-
-                      {activeIncomeList.length === 0 ? (
-                        <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '1.25rem 0', fontStyle: 'italic', textAlign: 'center' }}>
-                          No income sources logged for this month yet. Use the fields below to add one!
+                              );
+                            })
+                          )}
                         </div>
-                      ) : (
-                        <div className="income-list">
-                          {activeIncomeList.map(inc => (
-                            <div key={inc._id} className="income-row">
-                              <div style={{ display: 'flex', flexDirection: 'column' }}>
-                                <span className="income-source">{inc.source}</span>
-                                {inc.mode && <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>via {inc.mode}</span>}
-                              </div>
-                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
-                                <span className="income-amount">+{currency} {inc.amount.toLocaleString('en-IN')}</span>
-                                <button 
-                                  className="income-delete" 
-                                  onClick={() => handleDeleteIncome(activeLedger.month, inc._id)}
-                                  title="Delete income"
-                                >
-                                  <X size={12} />
-                                </button>
-                              </div>
-                            </div>
-                          ))}
+
+                        {/* New Category input bar */}
+                        <div className="add-category-bar">
+                          <input 
+                            type="text" 
+                            className="form-input" 
+                            placeholder="New category name..."
+                            value={newCategoryName}
+                            onChange={(e) => setNewCategoryName(e.target.value)}
+                          />
+                          <button className="btn-add-category" onClick={() => handleAddCategory(activeLedger.month)}>
+                            + Category
+                          </button>
                         </div>
-                      )}
 
-                      {/* Log Income Form */}
-                      <div className="income-form" style={{ marginTop: '1.25rem', gap: '0.5rem' }}>
-                        <input 
-                          type="text" 
-                          className="form-input" 
-                          style={{ flex: 2 }}
-                          placeholder="Income Source (e.g. Salary, Freelance)"
-                          value={incomeSourceInput}
-                          onChange={(e) => setIncomeSourceInput(e.target.value)}
-                        />
-                        <input 
-                          type="number" 
-                          className="form-input form-input-amt" 
-                          style={{ flex: 1 }}
-                          placeholder="Amount"
-                          value={incomeAmountInput}
-                          onChange={(e) => setIncomeAmountInput(e.target.value)}
-                        />
-                        <select 
-                          className="form-input" 
-                          style={{ flex: 1.2, background: 'var(--bg-input)' }}
-                          value={incomeModeInput}
-                          onChange={(e) => setIncomeModeInput(e.target.value)}
-                        >
-                          <option value="HDFC">HDFC</option>
-                          <option value="SBI">SBI</option>
-                          <option value="Kotak">Kotak</option>
-                          <option value="Cash">Cash</option>
-                          <option value="Card">Card</option>
-                          <option value="UPI">UPI</option>
-                        </select>
-                        <button className="btn-add-item" style={{ flexGrow: 1, padding: '0.45rem 1.25rem' }} onClick={() => handleLogIncome(activeLedger.month)}>
-                          + Log
-                        </button>
-                      </div>
-                    </div>
+                        {/* Monthly Income Logging Panel */}
+                        <div className="income-section">
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '1px solid rgba(255,255,255,0.05)', paddingBottom: '0.5rem' }}>
+                            <h3 className="income-title" style={{ margin: 0, fontSize: '1.2rem', fontFamily: 'var(--font-heading)' }}>Monthly Income</h3>
+                            <span style={{ fontSize: '0.9rem', color: 'var(--credit-green)', fontWeight: 600, fontFamily: 'var(--font-heading)' }}>
+                              Total: {currency} {totalIncome.toLocaleString('en-IN')}
+                            </span>
+                          </div>
 
+                          {activeIncomeList.length === 0 ? (
+                            <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', margin: '1.25rem 0', fontStyle: 'italic', textAlign: 'center' }}>
+                              No income sources logged for this month yet. Use the fields below to add one!
+                            </div>
+                          ) : (
+                            <div className="income-list">
+                              {activeIncomeList.map(inc => (
+                                <div key={inc._id} className="income-row">
+                                  <div>
+                                    <span style={{ fontWeight: 600 }}>{inc.source}</span>
+                                    <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', marginLeft: '0.5rem', textTransform: 'uppercase' }}>
+                                      via {inc.mode}
+                                    </span>
+                                  </div>
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                    <span style={{ fontWeight: 600, color: 'var(--credit-green)' }}>+ {currency}{inc.amount.toLocaleString('en-IN')}</span>
+                                    <button 
+                                      className="item-delete-btn"
+                                      onClick={() => handleDeleteIncome(activeLedger.month, inc._id)}
+                                    >
+                                      <Trash2 size={13} />
+                                    </button>
+                                  </div>
+                                </div>
+                              ))}
+                            </div>
+                          )}
+
+                          {/* Add income form */}
+                          <div className="income-form" style={{ marginTop: '1.25rem', gap: '0.5rem' }}>
+                            <input 
+                              type="text" 
+                              className="form-input" 
+                              style={{ flex: 2 }}
+                              placeholder="Income Source (e.g. Salary, Freelance)"
+                              value={incomeSourceInput}
+                              onChange={(e) => setIncomeSourceInput(e.target.value)}
+                            />
+                            <input 
+                              type="number" 
+                              className="form-input form-input-amt" 
+                              style={{ flex: 1 }}
+                              placeholder="Amount"
+                              value={incomeAmountInput}
+                              onChange={(e) => setIncomeAmountInput(e.target.value)}
+                            />
+                            <select 
+                              className="form-input" 
+                              style={{ flex: 1.2, background: 'var(--bg-input)' }}
+                              value={incomeModeInput}
+                              onChange={(e) => setIncomeModeInput(e.target.value)}
+                            >
+                              <option value="HDFC">HDFC</option>
+                              <option value="SBI">SBI</option>
+                              <option value="Kotak">Kotak</option>
+                              <option value="Cash">Cash</option>
+                              <option value="Card">Card</option>
+                              <option value="UPI">UPI</option>
+                            </select>
+                            <button className="btn-add-item" style={{ flexGrow: 1, padding: '0.45rem 1.25rem' }} onClick={() => handleLogIncome(activeLedger.month)}>
+                              + Log
+                            </button>
+                          </div>
+                        </div>
+                      </>
+                    )}
                   </div>
                 );
               })()
