@@ -3,6 +3,42 @@ const router = express.Router();
 const Ledger = require('../models/Ledger');
 const Bank = require('../models/Bank');
 
+// Helper to resolve the correct bank account for a given payment/income mode
+async function getBankForMode(mode, year, month) {
+  if (mode === 'Cash') return 'Cash';
+  if (['HDFC', 'SBI', 'Kotak'].includes(mode)) return mode;
+  
+  // For UPI or Card, find the bank that received the latest income in the current month
+  if (year && month) {
+    try {
+      const ledger = await Ledger.findOne({ year, month });
+      if (ledger && ledger.income && ledger.income.length > 0) {
+        for (let i = ledger.income.length - 1; i >= 0; i--) {
+          const incMode = ledger.income[i].mode;
+          if (['HDFC', 'SBI', 'Kotak'].includes(incMode)) {
+            return incMode;
+          }
+        }
+      }
+    } catch (err) {
+      console.error('Error finding matching income bank:', err);
+    }
+  }
+  
+  // Fallback: get the bank with the highest current balance (excluding Cash), default to HDFC
+  try {
+    const banks = await Bank.find({ bankName: { $in: ['HDFC', 'SBI', 'Kotak'] } });
+    if (banks.length > 0) {
+      const highestBank = banks.reduce((max, b) => b.currentAmount > max.currentAmount ? b : max, banks[0]);
+      return highestBank.bankName;
+    }
+  } catch (err) {
+    console.error('Error finding bank with highest balance:', err);
+  }
+  
+  return 'HDFC';
+}
+
 // Months helper
 const MONTH_NAMES = [
   'January', 'February', 'March', 'April', 'May', 'June',
@@ -198,8 +234,9 @@ router.post('/ledger/item', async (req, res) => {
 
     await ledger.save();
 
-    // Deduct from bank if mode matches a bankName
-    const bank = await Bank.findOne({ bankName: targetMode });
+    // Deduct from bank using dynamic mode mapping
+    const bankName = await getBankForMode(targetMode, parseInt(year), month);
+    const bank = await Bank.findOne({ bankName });
     if (bank) {
       bank.history.push({
         amount: bank.currentAmount,
@@ -251,8 +288,9 @@ router.delete('/ledger/item', async (req, res) => {
     category.items = category.items.filter(it => it._id.toString() !== itemId);
     await ledger.save();
 
-    // Refund bank if item mode matches a bankName
-    const bank = await Bank.findOne({ bankName: itemMode });
+    // Refund bank using dynamic mode mapping
+    const bankName = await getBankForMode(itemMode, parseInt(year), month);
+    const bank = await Bank.findOne({ bankName });
     if (bank) {
       bank.history.push({
         amount: bank.currentAmount,
@@ -399,8 +437,9 @@ router.post('/ledger/income', async (req, res) => {
 
     await ledger.save();
 
-    // Credit bank if mode matches a bankName
-    const bank = await Bank.findOne({ bankName: targetMode });
+    // Credit bank using dynamic mode mapping
+    const bankName = await getBankForMode(targetMode, parseInt(year), month);
+    const bank = await Bank.findOne({ bankName });
     if (bank) {
       bank.history.push({
         amount: bank.currentAmount,
@@ -446,8 +485,9 @@ router.delete('/ledger/income', async (req, res) => {
     ledger.income = ledger.income.filter(inc => inc._id.toString() !== incomeId);
     await ledger.save();
 
-    // Deduct bank if mode matches a bankName
-    const bank = await Bank.findOne({ bankName: itemMode });
+    // Deduct bank using dynamic mode mapping
+    const bankName = await getBankForMode(itemMode, parseInt(year), month);
+    const bank = await Bank.findOne({ bankName });
     if (bank) {
       bank.history.push({
         amount: bank.currentAmount,
