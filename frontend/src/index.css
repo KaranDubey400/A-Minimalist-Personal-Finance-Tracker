@@ -1149,8 +1149,8 @@ select.form-input:focus {
 }
 
 .sms-textarea:focus {
-  border-color: var(--accent-gold);
-  box-shadow: 0 0 5px rgba(229, 193, 88, 0.15);
+  border-color: var(--accent-gold) !important;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.35) !important;
 }
 
 .sms-parsed-row {
@@ -1200,6 +1200,7 @@ select.form-input:focus {
 
 .sms-parsed-input:focus {
   border-color: var(--accent-gold) !important;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.35) !important;
 }
 
 /* ==========================================
