@@ -1888,12 +1888,12 @@ function App() {
                                   
                                   {/* Trigger row */}
                                   <div className="category-trigger" onClick={() => toggleCategory(cat._id)}>
-                                    <div className="category-title-section" style={{ flexGrow: 1 }}>
+                                    <div className="category-title-section">
                                       <span className="accordion-arrow" style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
                                         {isCatOpen ? '▼' : '▶'}
                                       </span>
                                       
-                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem', flexGrow: 1, paddingRight: '1rem' }}>
+                                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.1rem' }}>
                                         <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                                           <span className="category-name">{cat.name}</span>
                                           {isCatOpen && (
@@ -1938,15 +1938,15 @@ function App() {
                                           </div>
                                         ) : (
                                           hasLimit && (
-                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.1rem' }}>
-                                              <div className="budget-progress-bg">
+                                            <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginTop: '0.25rem', width: '120px' }}>
+                                              <div className="budget-bar-bg" style={{ margin: 0, height: '4px', background: 'rgba(255, 255, 255, 0.08)' }}>
                                                 <div 
-                                                  className={`budget-progress-bar ${isOverBudget ? 'danger' : ''}`} 
+                                                  className={`budget-bar-fill ${isOverBudget ? 'glow-red' : 'glow-gold'}`} 
                                                   style={{ width: `${limitPercentage}%` }}
                                                 />
                                               </div>
-                                              <span style={{ fontSize: '0.65rem', color: isOverBudget ? '#ff6b6b' : 'var(--text-muted)' }}>
-                                                Limit: {currency}{limit.toLocaleString('en-IN')}
+                                              <span style={{ fontSize: '0.7rem', color: isOverBudget ? 'var(--debit-red)' : 'var(--text-secondary)', fontWeight: 500 }}>
+                                                {limitPercentage.toFixed(0)}%
                                               </span>
                                             </div>
                                           )
@@ -1954,18 +1954,20 @@ function App() {
                                       </div>
                                     </div>
                                     
-                                    <div className="category-meta-section">
-                                      <span className="category-total">
-                                        {currency} {catTotal.toLocaleString('en-IN')}
-                                        {hasLimit && (
-                                          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '0.2rem' }}>
-                                            / {limit.toLocaleString('en-IN')}
-                                          </span>
-                                        )}
-                                      </span>
-                                      <span className="category-badge">
-                                        {cat.items.length} ITEMS • {percentage.toFixed(0)}%
-                                      </span>
+                                    <div className="category-amount-section">
+                                      <div style={{ marginRight: '0.5rem', textAlign: 'right' }}>
+                                        <div className="category-sum">
+                                          {currency} {catTotal.toLocaleString('en-IN')}
+                                          {hasLimit && (
+                                            <span style={{ fontSize: '0.85rem', color: 'var(--text-muted)', fontWeight: 400, marginLeft: '0.3rem' }}>
+                                              / {limit.toLocaleString('en-IN')}
+                                            </span>
+                                          )}
+                                        </div>
+                                        <div className="category-meta">
+                                          {cat.items.length} ITEMS • {percentage.toFixed(0)}%
+                                        </div>
+                                      </div>
                                       <button 
                                         className="category-delete-btn"
                                         onClick={(e) => {
