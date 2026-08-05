@@ -485,9 +485,10 @@ body {
   flex-direction: column;
   gap: 0.5rem;
   margin-top: 1.25rem;
-  background: rgba(0,0,0,0.15);
+  background: rgba(0,0,0,0.25);
   padding: 1rem;
   border-radius: 8px;
+  border: 1px solid rgba(212, 175, 55, 0.08);
 }
 
 .category-item-form-row {
@@ -508,26 +509,28 @@ body {
 }
 
 .category-item-form-row .form-input:focus {
-  border-color: var(--border-focus);
+  border-color: var(--accent-gold);
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.35);
 }
 
 .category-item-form-row .btn-add-item {
   flex: 1;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-subtle);
-  color: var(--accent-gold);
+  background: linear-gradient(135deg, var(--accent-gold), #f3e5ab);
+  border: none;
+  color: #0c0c0e;
   border-radius: 6px;
   padding: 0.45rem 0.75rem;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: var(--transition-smooth);
   outline: none;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.15);
 }
 
 .category-item-form-row .btn-add-item:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, #f3e5ab, var(--accent-gold));
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.35);
 }
 
 /* Category header accordion font sizing overrides */
@@ -577,22 +580,48 @@ body {
 }
 
 .add-category-bar .btn-add-category {
-  flex: 1;
-  background: rgba(255, 255, 255, 0.04);
-  border: 1px solid var(--border-subtle);
-  color: var(--text-primary);
+  background: linear-gradient(135deg, var(--accent-gold), #f3e5ab);
+  border: none;
+  color: #0c0c0e;
   border-radius: 6px;
   padding: 0.45rem 0.75rem;
   font-size: 0.85rem;
-  font-weight: 600;
+  font-weight: 700;
   cursor: pointer;
   transition: var(--transition-smooth);
   outline: none;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.15);
 }
 
 .add-category-bar .btn-add-category:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, #f3e5ab, var(--accent-gold));
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.35);
+}
+
+/* Global inputs and buttons upgrades */
+.form-input:focus,
+select.form-input:focus {
+  border-color: var(--accent-gold) !important;
+  box-shadow: 0 0 8px rgba(212, 175, 55, 0.35) !important;
+}
+
+.btn-add-item {
+  background: linear-gradient(135deg, var(--accent-gold), #f3e5ab) !important;
+  border: none !important;
+  color: #0c0c0e !important;
+  border-radius: 6px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: var(--transition-smooth) !important;
+  outline: none;
+  box-shadow: 0 0 10px rgba(212, 175, 55, 0.15);
+}
+
+.btn-add-item:hover {
+  background: linear-gradient(135deg, #f3e5ab, var(--accent-gold)) !important;
+  box-shadow: 0 0 15px rgba(212, 175, 55, 0.35) !important;
 }
 
 /* Bank Balance Section styles */

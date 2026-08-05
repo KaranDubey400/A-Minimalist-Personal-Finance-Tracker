@@ -2020,70 +2020,73 @@ function App() {
                                       )}
 
                                       {/* Add new item form inside accordion */}
-                                      <div className="add-item-form-grid">
+                                      <div className="category-item-form-grid">
                                         {/* Row 1: Item Name & Payee */}
-                                        <input 
-                                          type="text" 
-                                          className="form-input" 
-                                          placeholder="Item Name" 
-                                          value={inputs.name || ''}
-                                          onChange={(e) => setItemInputs(prev => ({
-                                            ...prev,
-                                            [cat._id]: { ...inputs, name: e.target.value }
-                                          }))}
-                                        />
-                                        <input 
-                                          type="text" 
-                                          className="form-input" 
-                                          placeholder="Payee/Merchant (e.g. Zomato)"
-                                          value={inputs.payee || ''}
-                                          onChange={(e) => setItemInputs(prev => ({
-                                            ...prev,
-                                            [cat._id]: { ...inputs, payee: e.target.value }
-                                          }))}
-                                        />
+                                        <div className="category-item-form-row">
+                                          <input 
+                                            type="text" 
+                                            className="form-input" 
+                                            placeholder="Item Name" 
+                                            value={inputs.name || ''}
+                                            onChange={(e) => setItemInputs(prev => ({
+                                              ...prev,
+                                              [cat._id]: { ...inputs, name: e.target.value }
+                                            }))}
+                                          />
+                                          <input 
+                                            type="text" 
+                                            className="form-input" 
+                                            placeholder="Payee/Merchant (e.g. Zomato)"
+                                            value={inputs.payee || ''}
+                                            onChange={(e) => setItemInputs(prev => ({
+                                              ...prev,
+                                              [cat._id]: { ...inputs, payee: e.target.value }
+                                            }))}
+                                          />
+                                        </div>
                                         
-                                        {/* Row 2: Amount & Date */}
-                                        <input 
-                                          type="number" 
-                                          className="form-input form-input-amt" 
-                                          placeholder="Amount" 
-                                          value={inputs.amount || ''}
-                                          onChange={(e) => setItemInputs(prev => ({
-                                            ...prev,
-                                            [cat._id]: { ...inputs, amount: e.target.value }
-                                          }))}
-                                        />
-                                        <input 
-                                          type="date" 
-                                          className="form-input" 
-                                          value={selectedDate}
-                                          onChange={(e) => setItemInputs(prev => ({
-                                            ...prev,
-                                            [cat._id]: { ...inputs, date: e.target.value }
-                                          }))}
-                                        />
+                                        {/* Row 2: Amount, Date & Mode Dropdown */}
+                                        <div className="category-item-form-row" style={{ marginTop: '0.5rem' }}>
+                                          <input 
+                                            type="number" 
+                                            className="form-input form-input-amt" 
+                                            placeholder="Amount" 
+                                            value={inputs.amount || ''}
+                                            onChange={(e) => setItemInputs(prev => ({
+                                              ...prev,
+                                              [cat._id]: { ...inputs, amount: e.target.value }
+                                            }))}
+                                          />
+                                          <input 
+                                            type="date" 
+                                            className="form-input" 
+                                            style={{ colorScheme: 'dark' }}
+                                            value={selectedDate}
+                                            onChange={(e) => setItemInputs(prev => ({
+                                              ...prev,
+                                              [cat._id]: { ...inputs, date: e.target.value }
+                                            }))}
+                                          />
+                                          <select 
+                                            className="form-input"
+                                            style={{ background: 'var(--bg-input)' }}
+                                            value={inputs.mode || 'UPI'}
+                                            onChange={(e) => setItemInputs(prev => ({
+                                              ...prev,
+                                              [cat._id]: { ...inputs, mode: e.target.value }
+                                            }))}
+                                          >
+                                            <option value="HDFC">HDFC</option>
+                                            <option value="SBI">SBI</option>
+                                            <option value="Kotak">Kotak</option>
+                                            <option value="Cash">Cash</option>
+                                            <option value="Card">Card</option>
+                                            <option value="UPI">UPI</option>
+                                          </select>
+                                        </div>
 
-                                        {/* Row 3: Mode selection */}
-                                        <select 
-                                          className="form-input"
-                                          style={{ background: 'var(--bg-input)' }}
-                                          value={inputs.mode || 'UPI'}
-                                          onChange={(e) => setItemInputs(prev => ({
-                                            ...prev,
-                                            [cat._id]: { ...inputs, mode: e.target.value }
-                                          }))}
-                                        >
-                                          <option value="HDFC">HDFC</option>
-                                          <option value="SBI">SBI</option>
-                                          <option value="Kotak">Kotak</option>
-                                          <option value="Cash">Cash</option>
-                                          <option value="Card">Card</option>
-                                          <option value="UPI">UPI</option>
-                                        </select>
-                                        
-                                        {/* Row 4: Optional Note & Add Action */}
-                                        <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+                                        {/* Row 3: Note & Recurring Checkbox & Add Button */}
+                                        <div className="category-item-form-row" style={{ marginTop: '0.5rem', alignItems: 'center' }}>
                                           <input 
                                             type="text" 
                                             className="form-input" 
@@ -2093,9 +2096,9 @@ function App() {
                                               ...prev,
                                               [cat._id]: { ...inputs, note: e.target.value }
                                             }))}
-                                            style={{ flexGrow: 1 }}
+                                            style={{ flexGrow: 2 }}
                                           />
-                                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.25rem', fontSize: '0.75rem', cursor: 'pointer', whiteSpace: 'nowrap', color: 'var(--text-secondary)' }}>
+                                          <label style={{ display: 'flex', alignItems: 'center', gap: '0.3rem', fontSize: '0.8rem', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0 0.5rem', userSelect: 'none' }}>
                                             <input 
                                               type="checkbox"
                                               checked={!!inputs.isRecurring}
@@ -2104,13 +2107,12 @@ function App() {
                                                 [cat._id]: { ...inputs, isRecurring: e.target.checked }
                                               }))}
                                             />
-                                            Repeat monthly
+                                            <span>Repeat monthly</span>
                                           </label>
+                                          <button className="btn-add-item" style={{ flexGrow: 1 }} onClick={() => handleAddItem(activeLedger.month, cat._id)}>
+                                            Add
+                                          </button>
                                         </div>
-
-                                        <button className="btn-add-item" onClick={() => handleAddItem(activeLedger.month, cat._id)}>
-                                          Add
-                                        </button>
                                       </div>
 
                                     </div>
